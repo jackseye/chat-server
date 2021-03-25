@@ -2,27 +2,31 @@
 
 import socket
 import sys
+import threading
 
+BUFF = 2048
 
 def conn_to_server(socket):
-    data = s.recv(2048).decode('utf-8')
+    data = s.recv(BUFF).decode('utf-8')
 
     user_name = input(data)
     s.sendall(bytes(user_name, 'utf-8'))
-    data = s.recv(2048).decode('utf-8')
+    data = s.recv(BUFF).decode('utf-8')
 
     while 'Name already taken' in data:
         user_name = input(data)
         s.sendall(bytes(user_name, 'utf-8'))
-        data = s.recv(2048).decode('utf-8')
+        data = s.recv(BUFF).decode('utf-8')
 
     print(data)
-        
-def request_talk(ip):
-    s.sendall('ip')
 
-def accept_talk():
-    pass
+    return user_name
+
+def recv_msg(s):
+    data = s.recv(BUFF).decode('utf-8')
+    while data:
+        print(data + '\n>', end='')
+        data = s.recv(BUFF).decode('utf-8')
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -35,8 +39,13 @@ if __name__ == '__main__':
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
 
-        conn_to_server(s)
-        print("Enter \'talk <user-ip>\' to talk to another user\nEnter exit to disconnect")
+        user_name = conn_to_server(s)
+
+        recv_msg = threading.Thread(target=recv_msg, args=(s,))
+        recv_msg.start()
+
+        while recv_msg.is_alive():
+            user_in = input('>')
+            s.sendall(bytes(user_name + ':' + user_in, 'utf-8'))
         
-        while input('>') != 'exit':
-            print('hello')
+        print("Leaving the chat server")
